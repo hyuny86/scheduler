@@ -29,3 +29,16 @@ class Schedule(db.Model):
             'date': self.date.isoformat(),
             'shift_type': self.shift_type
         }
+
+class DailyInfo(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, unique=True, nullable=False)
+    stock = db.Column(db.String(50), default='')
+    event = db.Column(db.String(255), default='')
+
+    def to_dict(self):
+        return {
+            'date': self.date.isoformat(),
+            'stock': self.stock,
+            'event': self.event
+        }

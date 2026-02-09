@@ -132,6 +132,11 @@ th {
     min-width: 120px;
     border-right: 2px solid var(--border-color);
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+    transition: background 0.2s;
+}
+
+.sticky-col[title]:hover {
+    background-color: #f1f5f9;
 }
 
 th.sticky-col {

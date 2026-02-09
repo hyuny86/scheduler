@@ -31,6 +31,11 @@ document.addEventListener('DOMContentLoaded', () => {
         while (headerRow.children.length > 1) {
             headerRow.removeChild(headerRow.lastChild);
         }
+        // Clear stockRow and eventRow too
+        const stockRow = document.getElementById('stockRow');
+        const eventRow = document.getElementById('eventRow');
+        while (stockRow.children.length > 1) stockRow.removeChild(stockRow.lastChild);
+        while (eventRow.children.length > 1) eventRow.removeChild(eventRow.lastChild);
 
         const days = getDaysInMonth(year, month);
         for (let i = 1; i <= days; i++) {
@@ -39,12 +44,40 @@ document.addEventListener('DOMContentLoaded', () => {
             const dayName = date.toLocaleDateString('ko-KR', { weekday: 'short' });
             th.innerText = `${i}\n(${dayName})`;
 
-            // Highlight weekends
             if (date.getDay() === 0) th.style.color = 'red';
             if (date.getDay() === 6) th.style.color = 'blue';
 
             headerRow.appendChild(th);
+
+            // Add input cells for Stock and Event
+            addInfoCell('stockRow', i, year, month + 1);
+            addInfoCell('eventRow', i, year, month + 1);
         }
+
+        // Add Header for Stats on Right
+        const statHeaders = ['평균휴무', '평균스탁', 'HOL', 'T'];
+        statHeaders.forEach(text => {
+            const th = document.createElement('th');
+            th.className = 'stat-col';
+            th.innerText = text;
+            headerRow.appendChild(th.cloneNode(true));
+            document.getElementById('stockRow').appendChild(th.cloneNode(true));
+            document.getElementById('eventRow').appendChild(th.cloneNode(true));
+        });
+    }
+
+    function addInfoCell(rowId, day, year, month) {
+        const row = document.getElementById(rowId);
+        const td = document.createElement('td');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.dataset.date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        input.dataset.type = rowId === 'stockRow' ? 'stock' : 'event';
+
+        if (isViewer) input.readOnly = true;
+
+        td.appendChild(input);
+        row.appendChild(td);
     }
 
     function renderGrid() {
@@ -71,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const tdName = document.createElement('td');
             tdName.className = 'sticky-col';
             tdName.textContent = emp.name;
-            tdName.style.fontWeight = 'bold';
             tr.appendChild(tdName);
 
             for (let i = 1; i <= days; i++) {
@@ -91,13 +123,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 tr.appendChild(td);
             }
+
+            // Right side stats columns
+            ['avgOff', 'avgStock', 'hol', 't'].forEach(type => {
+                const td = document.createElement('td');
+                td.className = 'stat-col';
+                td.dataset.empId = emp.id;
+                td.dataset.statType = type;
+                tr.appendChild(td);
+            });
+
             tableBody.appendChild(tr);
         });
 
         loadSchedules();
+        loadDailyInfo();
     }
 
-    const shiftTypes = ['Empty', 'Holiday', 'Off', 'Day', 'Night'];
+    const shiftTypes = ['Empty', 'B', 'G', 'I', 'J', 'L', 'N', 'Holiday', 'Off'];
 
     function toggleShift(cell) {
         let currentClass = Array.from(cell.classList).find(c => c.startsWith('shift-')) || 'shift-Empty';
@@ -117,8 +160,6 @@ document.addEventListener('DOMContentLoaded', () => {
         cell.classList.add(`shift-${shift}`);
 
         if (shift === 'Empty') cell.innerText = '';
-        else if (shift === 'Day') cell.innerText = '주간';
-        else if (shift === 'Night') cell.innerText = '야간';
         else if (shift === 'Off') cell.innerText = '휴무';
         else if (shift === 'Holiday') cell.innerText = '휴가';
         else cell.innerText = shift;
@@ -141,27 +182,71 @@ document.addEventListener('DOMContentLoaded', () => {
         calculateStats();
     }
 
+    async function loadDailyInfo() {
+        const [year, month] = monthInput.value.split('-').map(Number);
+        const start = `${year}-${String(month).padStart(2, '0')}-01`;
+        const end = `${year}-${String(month).padStart(2, '0')}-${getDaysInMonth(year, month - 1)}`;
+
+        const res = await fetch(`/api/daily_info?start=${start}&end=${end}`);
+        const infos = await res.json();
+
+        infos.forEach(info => {
+            const stockInput = document.querySelector(`input[data-date="${info.date}"][data-type="stock"]`);
+            const eventInput = document.querySelector(`input[data-date="${info.date}"][data-type="event"]`);
+            if (stockInput) stockInput.value = info.stock;
+            if (eventInput) eventInput.value = info.event;
+        });
+        calculateStats();
+    }
+
     function calculateStats() {
         const stats = {};
         employees.forEach(e => {
-            stats[e.id] = { name: e.name, Day: 0, Night: 0, Off: 0, Holiday: 0, Total: 0 };
+            stats[e.id] = { Off: 0, Holiday: 0, Total: 0 };
         });
 
-        document.querySelectorAll('td[data-emp-id]').forEach(td => {
+        // Daily stocks for average calculation
+        const dailyStocks = {};
+        document.querySelectorAll('input[data-type="stock"]').forEach(input => {
+            dailyStocks[input.dataset.date] = parseFloat(input.value) || 0;
+            input.onchange = calculateStats; // Recalc on change
+        });
+
+        document.querySelectorAll('td[data-emp-id][data-date]').forEach(td => {
             const empId = td.dataset.empId;
             const shiftClass = Array.from(td.classList).find(c => c.startsWith('shift-'));
             if (shiftClass && stats[empId]) {
                 const shift = shiftClass.replace('shift-', '');
-                if (stats[empId][shift] !== undefined) {
-                    stats[empId][shift]++;
-                    if (shift === 'Day' || shift === 'Night') {
-                        stats[empId].Total++;
-                    }
+                if (shift === 'Off') stats[empId].Off++;
+                else if (shift === 'Holiday') stats[empId].Holiday++;
+                else if (['B', 'G', 'I', 'J', 'L', 'N'].includes(shift)) {
+                    stats[empId].Total++;
                 }
             }
         });
 
-        renderStats(stats);
+        employees.forEach(emp => {
+            const empStats = stats[emp.id];
+            updateStatCol(emp.id, 'hol', empStats.Holiday);
+            updateStatCol(emp.id, 't', empStats.Total);
+            updateStatCol(emp.id, 'avgOff', (empStats.Off / 4).toFixed(1));
+
+            let totalStockWorked = 0;
+            document.querySelectorAll(`td[data-emp-id="${emp.id}"][data-date]`).forEach(td => {
+                const shiftClass = Array.from(td.classList).find(c => c.startsWith('shift-'));
+                const shift = shiftClass?.replace('shift-', '');
+                if (['B', 'G', 'I', 'J', 'L', 'N'].includes(shift)) {
+                    totalStockWorked += dailyStocks[td.dataset.date] || 0;
+                }
+            });
+            const avgStock = empStats.Total > 0 ? (totalStockWorked / empStats.Total).toFixed(1) : 0;
+            updateStatCol(emp.id, 'avgStock', avgStock);
+        });
+    }
+
+    function updateStatCol(empId, type, value) {
+        const cell = document.querySelector(`td[data-emp-id="${empId}"][data-stat-type="${type}"]`);
+        if (cell) cell.innerText = value;
     }
 
     function renderStats(stats) {
@@ -291,6 +376,28 @@ document.addEventListener('DOMContentLoaded', () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updates)
         });
+
+        // Save Daily Info
+        const dailyInfoUpdates = [];
+        document.querySelectorAll('.info-row input').forEach(input => {
+            const date = input.dataset.date;
+            const type = input.dataset.type;
+            const val = input.value;
+
+            let existing = dailyInfoUpdates.find(u => u.date === date);
+            if (!existing) {
+                existing = { date: date, stock: '', event: '' };
+                dailyInfoUpdates.push(existing);
+            }
+            existing[type] = val;
+        });
+
+        await fetch('/api/daily_info', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dailyInfoUpdates)
+        });
+
         alert('저장되었습니다!');
     };
 

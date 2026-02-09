@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify
-from models import db, Employee, Schedule
+from models import db, Employee, Schedule, DailyInfo
 from datetime import datetime, timedelta
 import os
 
@@ -9,9 +9,16 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
-@app.before_first_request
-def create_tables():
+with app.app_context():
     db.create_all()
+    if not Employee.query.first():
+        default_names = [
+            "도광록 SM", "권누리 DM", "이민호 SCA", "배지연 SCA", "이윤조 SCA",
+            "이현창 CA", "박현태 CA", "박성언 CA", "조원우 CA", "임수혁 SA"
+        ]
+        for name in default_names:
+            db.session.add(Employee(name=name))
+        db.session.commit()
 
 @app.route('/')
 def index():
@@ -31,12 +38,18 @@ def manage_employees():
     employees = Employee.query.all()
     return jsonify([e.to_dict() for e in employees])
 
-@app.route('/api/employees/<int:id>', methods=['DELETE'])
-def delete_employee(id):
+@app.route('/api/employees/<int:id>', methods=['PUT', 'DELETE'])
+def manage_employee_item(id):
     employee = Employee.query.get_or_404(id)
-    db.session.delete(employee)
+    if request.method == 'DELETE':
+        db.session.delete(employee)
+        db.session.commit()
+        return jsonify({'message': 'Deleted'}), 200
+    
+    data = request.json
+    employee.name = data.get('name', employee.name)
     db.session.commit()
-    return jsonify({'message': 'Deleted'}), 200
+    return jsonify(employee.to_dict())
 
 @app.route('/api/schedules', methods=['GET', 'POST'])
 def manage_schedules():
@@ -180,6 +193,37 @@ def auto_assign():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+from models import db, Employee, Schedule, DailyInfo
+
+# ...
+
+@app.route('/api/daily_info', methods=['GET', 'POST'])
+def manage_daily_info():
+    if request.method == 'POST':
+        data = request.json # List of {date, stock, event}
+        updates = data if isinstance(data, list) else [data]
+        for item in updates:
+            date_obj = datetime.strptime(item['date'], '%Y-%m-%d').date()
+            info = DailyInfo.query.filter_by(date=date_obj).first()
+            if info:
+                info.stock = item.get('stock', info.stock)
+                info.event = item.get('event', info.event)
+            else:
+                new_info = DailyInfo(date=date_obj, stock=item.get('stock', ''), event=item.get('event', ''))
+                db.session.add(new_info)
+        db.session.commit()
+        return jsonify({'message': 'Daily info updated'}), 200
+
+    start_date_str = request.args.get('start')
+    end_date_str = request.args.get('end')
+    query = DailyInfo.query
+    if start_date_str and end_date_str:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        query = query.filter(DailyInfo.date >= start_date, DailyInfo.date <= end_date)
+    
+    return jsonify([i.to_dict() for i in query.all()])
 
 if __name__ == '__main__':
     app.run(debug=True)
