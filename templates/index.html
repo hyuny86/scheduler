@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스케줄 플래너</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <header>
+            <h1>📅 근무 스케줄 관리</h1>
+            <div class="controls">
+                <input type="month" id="scheduleMonth" value="2023-10">
+                <button id="addEmployeeBtn">직원 추가</button>
+                <button id="autoAssignBtn" class="primary">자동 배정</button>
+                <button id="saveBtn" class="success">저장 하기</button>
+                <button id="shareBtn">링크 공유</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="spreadsheet-container">
+                <table id="scheduleTable">
+                    <thead>
+                        <tr id="headerRow">
+                            <th class="sticky-col">이름 \ 날짜</th>
+                            <!-- Dates will be generated here -->
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleBody">
+                        <!-- Rows will be generated here -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+
+        <aside class="statistics-panel">
+            <h2>통계</h2>
+            <div id="statsContent">
+                <!-- Stats will be loaded here -->
+            </div>
+        </aside>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>자동 배정 설정</h2>
+            <div class="form-group">
+                <label for="minDay">주간 최소 인원:</label>
+                <input type="number" id="minDay" value="2" min="0">
+            </div>
+            <div class="form-group">
+                <label for="minNight">야간 최소 인원:</label>
+                <input type="number" id="minNight" value="1" min="0">
+            </div>
+            <button id="runAutoAssign" class="primary">배정 시작</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+
+</html>
