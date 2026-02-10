@@ -39,7 +39,7 @@ if ! command -v aws &> /dev/null; then
     echo "  AWS Security Group 설정을 건너뜁니다"
     HAS_AWS=0
 else
-    if aws sts get-caller-identity &> /dev/null 2>&1; then
+    if aws sts get-caller-identity &> /dev/null; then
         echo -e "${GREEN}✓ AWS CLI 설정 완료${NC}"
         HAS_AWS=1
     else

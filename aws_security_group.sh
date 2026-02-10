@@ -216,13 +216,13 @@ list_security_group_rules() {
     echo ""
     print_info "Inbound Rules:"
     aws ec2 describe-security-groups --group-ids "$sg_id" \
-        --query 'SecurityGroups[0].IpPermissions[*].[IpProtocol,FromPort,ToPort,IpRanges[0].CidrIp,IpRanges[0].Description]' \
+        --query 'SecurityGroups[0].IpPermissions[*].[IpProtocol,FromPort,ToPort,IpRanges[*].CidrIp,IpRanges[*].Description]' \
         --output table
     
     echo ""
     print_info "Outbound Rules:"
     aws ec2 describe-security-groups --group-ids "$sg_id" \
-        --query 'SecurityGroups[0].IpPermissionsEgress[*].[IpProtocol,FromPort,ToPort,IpRanges[0].CidrIp,IpRanges[0].Description]' \
+        --query 'SecurityGroups[0].IpPermissionsEgress[*].[IpProtocol,FromPort,ToPort,IpRanges[*].CidrIp,IpRanges[*].Description]' \
         --output table
 }
 

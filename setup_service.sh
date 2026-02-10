@@ -69,7 +69,7 @@ Description=Flask Scheduler Application for mldl
 After=network.target
 
 [Service]
-Type=notify
+Type=simple
 User=$APP_USER
 Group=$APP_USER
 WorkingDirectory=$APP_DIR
