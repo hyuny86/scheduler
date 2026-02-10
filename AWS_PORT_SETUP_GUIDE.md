@@ -339,6 +339,24 @@ nohup gunicorn -w 4 -b 0.0.0.0:8000 app:app > gunicorn.log 2>&1 &
 
 ### Systemd 서비스로 실행
 
+#### 방법 1: 자동 설정 스크립트 사용 (권장)
+
+```bash
+# 스크립트를 실행하여 자동으로 서비스 설정
+sudo ./setup_service.sh
+
+# 또는 특정 디렉토리와 사용자 지정
+sudo ./setup_service.sh /path/to/scheduler username
+```
+
+이 스크립트는 자동으로:
+- 가상 환경 생성
+- 의존성 설치 (gunicorn 포함)
+- systemd 서비스 파일 생성
+- 서비스 활성화 및 시작
+
+#### 방법 2: 수동 설정
+
 1. 서비스 파일 생성:
 
 ```bash

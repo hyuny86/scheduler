@@ -20,6 +20,11 @@
   - 사용자 친화적인 메뉴 인터페이스
   - 단계별 안내
 
+- **`setup_service.sh`** - Systemd 서비스 설정 스크립트
+  - 자동으로 systemd 서비스 생성 및 시작
+  - 가상 환경 및 의존성 자동 설치
+  - 프로덕션 환경 설정
+
 ### 문서
 
 - **`AWS_PORT_SETUP_GUIDE.md`** - 상세한 설정 가이드
@@ -32,7 +37,7 @@
 ### 1. 스크립트 실행 권한 부여
 
 ```bash
-chmod +x aws_port_setup.sh aws_security_group.sh quick_setup.sh
+chmod +x aws_port_setup.sh aws_security_group.sh quick_setup.sh setup_service.sh
 ```
 
 ### 2. 대화형 설정 도구 실행
@@ -96,6 +101,9 @@ sudo ./aws_port_setup.sh all sg-0123456789abcdef
 
 # SSH를 특정 IP로 제한 (보안 강화)
 ./aws_security_group.sh restrict sg-0123456789abcdef 22 YOUR_IP
+
+# Systemd 서비스로 애플리케이션 설정 및 시작
+sudo ./setup_service.sh
 ```
 
 ## 🔒 보안 권장사항
